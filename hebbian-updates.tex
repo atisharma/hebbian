@@ -1,0 +1,158 @@
+% A S Sharma 2016
+
+\documentclass[onecolumn, twoside, 11pt]{article}
+
+\usepackage{parskip}
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{dcolumn}
+
+\usepackage{fontspec}
+\usepackage{xunicode}
+\usepackage{xltxtra}
+\defaultfontfeatures{Mapping=tex-text}
+%\setmainfont[Ligatures={Common,TeX}]{Bembo Std}
+%\setsansfont[Ligatures={Common,TeX}]{Helvetica Neue LT Pro}
+\usepackage[final]{microtype}
+
+%--------------------------------------------------------------------
+
+\newcommand{\norm}[1]{\lVert#1\rVert}
+\newcommand{\vbar}{\Big\vert}
+\newcommand{\inprod}[2]{\left<{#1},{#2}\right>}
+
+\newcommand\va{\mathbf{a}}
+\newcommand\vb{\mathbf{b}}
+\newcommand\vc{\mathbf{c}}
+\newcommand\vd{\mathbf{d}}
+\newcommand\ve{\mathbf{e}}
+\newcommand\vf{\mathbf{f}}
+\newcommand\vg{\mathbf{g}}
+\newcommand\vh{\mathbf{h}}
+
+\newcommand\vk{\mathbf{k}}
+
+\newcommand\vs{\mathbf{s}}
+
+\newcommand\vu{\mathbf{u}}
+\newcommand\vv{\mathbf{v}}
+\newcommand\vw{\mathbf{w}}
+
+\newcommand\vx{\mathbf{x}}
+\newcommand\vy{\mathbf{y}}
+\newcommand\vz{\mathbf{z}}
+
+\newcommand\vhg{\hat{\mathbf{g}}}
+\newcommand\vhk{\hat{\mathbf{k}}}
+\newcommand\vhu{\hat{\mathbf{u}}}
+\newcommand\vhx{\hat{\mathbf{x}}}
+\newcommand\vhy{\hat{\mathbf{y}}}
+\newcommand\vhz{\hat{\mathbf{z}}}
+
+\newcommand\vtg{\tilde{\mathbf{g}}}
+\newcommand\vtu{\tilde{\mathbf{u}}}
+\newcommand\vtx{\tilde{\mathbf{x}}}
+\newcommand\vty{\tilde{\mathbf{y}}}
+\newcommand\vtz{\tilde{\mathbf{z}}}
+
+\newcommand\mA{\mathbf{A}}
+\newcommand\mB{\mathbf{B}}
+\newcommand\mL{\mathbf{L}}
+\newcommand\mU{\mathbf{U}}
+\newcommand\mF{\mathbf{F}}
+
+\newcommand\Z{\mathbb{Z}}
+\newcommand\N{\mathbb{N}}
+\newcommand\R{\mathbb{R}}
+\newcommand\C{\mathbb{C}}
+
+%--------------------------------------------------------------------
+
+\title{Notes on resolvent modes from simulation data using Hebbian updates}
+\author{A S Sharma}
+
+\begin{document}
+\maketitle
+
+\section{Singular value decomposition using Hebbian updates}
+
+Based on~\cite{conf/eacl/Gorrell06}, the following algorithm will generate the singular vectors of a matrix or linear operator $R: \mF \rightarrow \mU$.
+The notation in that paper is a bit confusing so I will try to summarise and clarify it here.
+
+Let $u \in \mU$ and $f \in \mF$ be a matching data vector pair satisfying $u = Rf$. The inner product in $\mU$ is denoted $\inprod{x}{y}_\mU$ and similarly for $\mF$.
+
+Let $c^{u*}_i$ be the true $i$th left singular vector of $R$ to be found and $c^{f*}_i$ be the corresponding true right singular vector.
+Let $c^u_i$ be the current approximation to $c^{u*}_i$ and define $c^f_i$ similarly.
+The notation $\Delta c^u_i$ indicates an update (change) to the approximation $c^u_i$.
+
+According to \cite{conf/eacl/Gorrell06} (eqs 19-20), updates of $c^u$ and $c^f$ may be performed using
+\begin{eqnarray}
+    \label{eq:updates}
+    \Delta c^u_i = \inprod{c^f_i}{f}_\mF ( u - \sum_{j<i} \inprod{u}{c^u_j}_\mU c^u_j), \\
+    \Delta c^f_i = \inprod{c^u_i}{u}_\mU ( f - \sum_{j<i} \inprod{f}{c^f_j}_\mF c^f_j).
+\end{eqnarray}
+
+My understanding is that the approximations $c^u_i$ and $c^f_i$ are proven to converge to the true singular vectors of $R$ given `enough' iterations and data vectors $(u,f)$ that span $(\mU,\mF)$.
+
+Note that we do not need direct access to $R$ --- only enough data vector pairs. This opens up the possibility of using random vectors, or even direct numerical simulation datasets, with low storage and computational requirements.
+
+\section{Application to linearised code}
+
+In the case that we have access to a linearised code we would still need to form $R$ in order to generate test vector pairs. This is a slight improvement on the loop in the algorithm of~\cite{doi:10.2514/6.2022-1329}.
+
+\section{Application to nonlinear turbulent simulations}
+
+What really got my attention, however, is the possibility of using this algorithm on-line with data generated from a turbulent simulation.
+
+To see why this is possible, recall that the resolvent formulation used in \cite{McKeon.Sharma:2010} of the Navier-Stokes equations has to parts.
+The linear part is (in the frequency-domain)
+\begin{equation}
+    \label{eq:resolvent}
+    u(\omega) = R(\omega)f(\omega)
+\end{equation}
+and the nonlinear part is
+\begin{equation}
+    \label{eq:nonlinear}
+    f(t) = u(t) \cdot \nabla u(t).
+\end{equation}
+
+Both must be true simultaneously and always.
+
+Since the updates require only the pairs $(u,f)$, instead of generating $u$ from $f$ via the resolvent using \eqref{eq:resolvent}, we can generate $f$ from $u$ via their nonlinear relationship \eqref{eq:nonlinear}. The frequency-domain pairs $(u(\omega), f(\omega))$ can then be generated from snapshot matrices of $u(t)$ and $f(t)$.
+
+To do this, first form the snapshot matrix $U_1$,
+\[U_1 = \left[
+        \begin{array}{ccccc}
+            u(t_1) & u(t_2) & u(t_3) & \ldots & u(t_N)
+        \end{array}
+    \right].
+\]
+Its discrete Fourier transform is the matrix of frequencies which form a set (across frequencies) of snapshots in $\mU$.
+\[ F_1 = DFT(U_1) = \left[
+        \begin{array}{ccccc}
+            u(\omega_1) & u(\omega_2) & u(\omega_3) & \ldots 
+        \end{array}
+    \right].
+\]
+The frequencies that can be resolved are determined by the timestep and $N$.
+Similarly, form the corresponding snapshot matrix $F_1$, with $DFT(F_1)$ giving a right test vector per frequency in $\mF$.
+
+Inspired by Welch's method, we can generate the next snapshot matrix by shifting time by one (or more) steps,
+\[U_2 = \left[
+        \begin{array}{ccccc}
+            u(t_2) & u(t_3) & u(t_4) & \ldots & u(t_{N+1})
+        \end{array}
+    \right].
+\]
+The next set of test vector pairs (one per frequency) is given by the DFT of $U_2$ and $F_2$, and so on.
+
+This process gives one test vector pair per frequency, per snapshot matrix and can be fed to \eqref{eq:updates} until convergence.
+
+\section{Other approaches}
+
+I haven't read \cite{towne2015proceedings} but it and following work may be related.
+
+\bibliography{hebbian-updates.bib}
+\bibliographystyle{ieeetr}
+\end{document}
