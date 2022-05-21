@@ -33,19 +33,19 @@ Incremental PCA, SVD using Hebbian updates (from data only).
 (import [rich [print]])
 
 
-(setv N 3)
+(setv N 10
+      M 5
+      L 2)
 (numpy.set_printoptions :precision 2 :suppress True)
 
 (setv rng (default-rng))
-(setv M (+ (rng.standard-normal [N N])
-           (* 1j (rng.standard-normal [N N]))))
-
-(setv Minv (inv M))
+(setv A (+ (rng.standard-normal [N M])
+           (* 1j (rng.standard-normal [N M]))))
 
 
 (defn outer [a b]
   """
-  Complex outer product of a and b: a* b^T.
+  Complex outer product of a and b: a x b^T.
   """
   (numpy.outer a (conj b)))
 
@@ -56,10 +56,10 @@ Incremental PCA, SVD using Hebbian updates (from data only).
     You can generate either a and find b, or the other way round.
     The Hebbian solver doesn't know.
   """
-  (let [a (+ (rng.standard-normal N)
-             (* 1j (rng.standard-normal N)))]
-    {"b" (@ Minv a)
-     "a" a}))
+  (let [b (+ (rng.standard-normal M)
+             (* 1j (rng.standard-normal M)))]
+    {"b" b
+     "a" (@ A b)}))
 
 
 (defn pca-update [W x [eta 1e-3]]
@@ -74,12 +74,12 @@ Incremental PCA, SVD using Hebbian updates (from data only).
                     (@ W (triu (outer y y))))))))
 
 
-(defn pca-solve [W [N 100000] [eta 1e-3] [d 1e-3] [verbose False]]
+(defn pca-solve [W [iterations 10000] [eta 1e-3] [d 1e-3] [verbose False]]
   """
   Solve iteratively for the eigenvectors of M.
   Exponential decay d on learning rate eta.
   """
-  (for [n (range N)]
+  (for [n (range iterations)]
     (let [data-pair (gen-pair)
           eta-decayed (* eta (exp (* -1 d n)))]
       (when verbose
@@ -88,13 +88,13 @@ Incremental PCA, SVD using Hebbian updates (from data only).
   W)
 
 
-(defn pca-test [[verbose False]]
-  (let [R (@ M (conj M.T))
+(defn pca-test [#** kwargs]
+  (let [R (@ A (conj A.T))
         [L-ref W-ref] (eig R)
-        W (pca-solve (rng.standard-normal [N N]) :verbose verbose)
+        W (pca-solve (rng.standard-normal [N N]) #** kwargs)
         L (diag (@ (inv W) R W))]
-      (print "M")
-      (print M)
+      (print "A")
+      (print A)
       (print)
       (print "R")
       (print R)
@@ -121,7 +121,7 @@ Incremental PCA, SVD using Hebbian updates (from data only).
 
 (defn svd-update [U V data-pair [eta 1e-3]]
   """
-  Incremental update to approximate SVD matrices U, V of operator M
+  Incremental update to approximate SVD matrices U, V of operator A
     with one data vector pair a, b. Returns updated U, V.
   See Gorrell's paper.
   """
@@ -130,19 +130,19 @@ Incremental PCA, SVD using Hebbian updates (from data only).
         ya (@ (conj U.T) a)
         yb (@ (conj V.T) b)]
     {"U" (+ U
-            (* eta (- (@ (outer a b) V)
+            (* eta (- (outer a yb)
                       (@ U (triu (outer ya ya))))))
      "V" (+ V
-            (* eta (- (@ (outer b a) U)
+            (* eta (- (outer b ya)
                       (@ V (triu (outer yb yb))))))}))
 
 
-(defn svd-solve [U V [N 10000] [eta 1e-2] [d 5e-4] [verbose False]]
+(defn svd-solve [U V [iterations 10000] [eta 1e-3] [d 5e-4] [verbose False]]
   """
   Solve iteratively for the eigenvectors of M.
   Exponential decay d on learning rate eta.
   """
-  (for [n (range N)]
+  (for [n (range iterations)]
     (let [data-pair (gen-pair)
           eta-decayed (* eta (exp (* -1 d n)))
           UV (svd-update U V data-pair :eta eta-decayed)]
@@ -153,22 +153,28 @@ Incremental PCA, SVD using Hebbian updates (from data only).
    "V" V})
 
 
-(defn svd-test [[verbose False]]
-  (let [[U-ref S-ref V-ref] (svd M)
-        U0 (rng.standard-normal [N N])
-        V0 (rng.standard-normal [N N])
-        UV (svd-solve U0 V0 :verbose verbose)
+(defn svd-test [#** kwargs]
+  (let [[U-ref S-ref V-ref] (svd A)
+        U0 (rng.standard-normal [N L])
+        V0 (rng.standard-normal [M L])
+        UV (svd-solve U0 V0 #** kwargs)
         U (:U UV)
         V (:V UV)
-        S (@ (conj U.T) M V)]
-      (print "M")
-      (print M)
+        S (@ (conj U.T) A V)]
+      (print "A")
+      (print A)
       (print)
       (print "U (ref)")
       (print U-ref)
       (print)
       (print "U (GHA)")
       (print U)
+      (print)
+      (print "V (ref)")
+      (print V-ref)
+      (print)
+      (print "V (GHA)")
+      (print V)
       (print)
       (print "S (ref)")
       (print (diag S-ref))
