@@ -4,12 +4,12 @@ Incremental PCA, SVD using Hebbian updates (from data only) as per Gorrell's pap
 
 ### PCA problem
 
-Given many data vectors $\{x\}$, find the eigenvectors of the correlation matrix $R$,
+Given many data vectors {$x$}, find the eigenvectors of the correlation matrix $R$,
 where $E(xx') = R$.
 
 ### SVD problem
 
-Given many data vector pairs $\{(a,b)\}$, where $a=Mb$, find the singular vectors of $M$.
+Given many data vector pairs {$(a,b)$}, where $a=Mb$, find the singular vectors of $M$.
 
 ### Convergence
 
