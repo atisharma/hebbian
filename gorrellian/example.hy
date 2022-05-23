@@ -30,11 +30,9 @@ Incremental PCA, SVD using Hebbian updates (from data only).
 (import [numpy.linalg [svd eig inv norm]])
 (import [numpy.random [default-rng]])
 
-(import [rich [print]])
 
-
-(setv N 10
-      M 5
+(setv N 200
+      M 500
       L 2)
 (numpy.set_printoptions :precision 2 :suppress True)
 
@@ -155,8 +153,8 @@ Incremental PCA, SVD using Hebbian updates (from data only).
 
 (defn svd-test [#** kwargs]
   (let [[U-ref S-ref V-ref] (svd A)
-        U0 (rng.standard-normal [N L])
-        V0 (rng.standard-normal [M L])
+        U0 (eye N L)
+        V0 (eye M L)
         UV (svd-solve U0 V0 #** kwargs)
         U (:U UV)
         V (:V UV)
