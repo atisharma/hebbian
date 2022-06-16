@@ -21,22 +21,20 @@ Incremental PCA, SVD using Hebbian updates (from data only).
 
 """
 
-(require [hy.contrib.walk [let]])
-(require [hy.contrib.loop [loop]])
 
 (import numpy)
-(import [numpy [complex array diag outer conj eye tril triu exp]])
-(import [numpy [vdot :as inner]])             ; complex vector inner product
-(import [numpy.linalg [svd eig inv norm]])
-(import [numpy.random [default-rng]])
+(import numpy [complex array diag outer conj eye tril triu exp])
+(import numpy [vdot :as inner])             ; complex vector inner product
+(import numpy.linalg [svd eig inv norm])
+(import numpy.random [default-rng])
 
 
-(setv N 200
-      M 500
+(setv N 50
+      M 100
       L 2)
 (numpy.set_printoptions :precision 2 :suppress True)
 
-(setv rng (default-rng))
+(setv rng (default-rng 1))
 (setv A (+ (rng.standard-normal [N M])
            (* 1j (rng.standard-normal [N M]))))
 
@@ -72,7 +70,7 @@ Incremental PCA, SVD using Hebbian updates (from data only).
                     (@ W (triu (outer y y))))))))
 
 
-(defn pca-solve [W [iterations 10000] [eta 1e-3] [d 1e-3] [verbose False]]
+(defn pca-solve [W [iterations 100000] [eta 1e-4] [d 1e-4] [verbose False]]
   """
   Solve iteratively for the eigenvectors of M.
   Exponential decay d on learning rate eta.
@@ -135,7 +133,7 @@ Incremental PCA, SVD using Hebbian updates (from data only).
                       (@ V (triu (outer yb yb))))))}))
 
 
-(defn svd-solve [U V [iterations 10000] [eta 1e-3] [d 5e-4] [verbose False]]
+(defn svd-solve [U V [iterations 100000] [eta 1e-4] [d 1e-4] [verbose False]]
   """
   Solve iteratively for the eigenvectors of M.
   Exponential decay d on learning rate eta.

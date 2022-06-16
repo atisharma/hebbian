@@ -28,6 +28,7 @@ pkgs.stdenv.mkDerivation rec {
     pypkgs.jax
     pypkgs.jaxlib
     pypkgs.matplotlib
+    pypkgs.black
 
     pypkgs.pyqt5
     pypkgs.hy
