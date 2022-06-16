@@ -7,6 +7,7 @@
 \usepackage{graphicx}
 \usepackage{array}
 \usepackage{dcolumn}
+\usepackage[]{algorithm2e}
 
 \usepackage{fontspec}
 \usepackage{xunicode}
@@ -67,6 +68,9 @@
 \newcommand\R{\mathbb{R}}
 \newcommand\C{\mathbb{C}}
 
+\newcommand\triu{\mathrm{triu}}
+\newcommand\tril{\mathrm{tril}}
+
 %--------------------------------------------------------------------
 
 \title{Notes on resolvent modes from simulation data using Hebbian updates}
@@ -96,6 +100,27 @@ According to \cite{conf/eacl/Gorrell06} (eqs 19-20), updates of $c^u$ and $c^f$ 
 My understanding is that the approximations $c^u_i$ and $c^f_i$ are proven to converge to the true singular vectors of $R$ given `enough' iterations and data vectors $(u,f)$ that span $(\mU,\mF)$.
 
 Note that we do not need direct access to $R$ --- only enough data vector pairs. This opens up the possibility of using random vectors, or even direct numerical simulation datasets, with low storage and computational requirements.
+
+\section{Pseudocode}
+
+\begin{algorithm}[H]
+    \KwData{$A \in \mathbb{R}^{N \times M}$}
+    \KwResult{$U \in \mathbb{R}^{N \times L}$, $V \in \mathbb{R}^{M \times L}$}
+    initialise $U$, $V$ \;
+    initialise $\eta_0 \ll 1$, $d \ll 1$ \;
+    \For{$n=1$ \KwTo $n_{max}$}{
+        \KwData{
+            snapshot pair $a \in \mathbb{R}^{N}$, $b \in \mathbb{R}^{M}$
+        }
+        $\eta \leftarrow \eta_0 \mathrm{e}^{-dn}$ \\
+        $y_a \leftarrow U^H a$ \\
+        $y_b \leftarrow V^H b$ \\
+        $U \leftarrow U + \eta ~ (a y_b^H - U ~ \triu (y_a y_a^H))$ \\
+        $V \leftarrow V + \eta ~ (b y_a^H - V ~ \triu (y_b y_b^H))$ \\
+    }
+    \caption{SVD algorithm of \cite{conf/eacl/Gorrell06}, as implemented in the example code in this project. Superscipt $H$ indicates conjugate transpose, and $a$ and $b$ are column vectors, so that (for example) $y_a y_a^H$ is an outer product resulting in a $L \times L$ matrix. $\triu(X)$ indicates setting to zero all but the upper triangular part of a matrix $X$ ($\tril$ also works).}
+\end{algorithm}
+
 
 \section{Application to linearised code}
 

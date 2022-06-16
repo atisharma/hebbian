@@ -137,7 +137,7 @@ def svd_solve(U, V, iterations=100000, eta=1e-4, d=1e-4, verbose=False):
         eta_decayed = eta * exp(-d * n)
         UV = svd_update(U, V, data_pair, eta=eta_decayed)
         if verbose:
-            print(n, U[..., 1], eta - decayed)
+            print(n, U[..., 1], eta_decayed)
         U = UV["U"]
         V = UV["V"]
     return {"U": U, "V": V}
