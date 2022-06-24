@@ -23,6 +23,7 @@ Incremental SVD using Hebbian updates (from data only).
 import os
 import jax
 
+# sol has a GPU, which is 32 bit
 if os.uname()[1] != 'sol':
     jax.config.update("jax_enable_x64", True)
 
@@ -30,6 +31,7 @@ import scipy
 import scipy.sparse.linalg as sla
 from scipy.io import loadmat
 
+import numpy
 from numpy.random import default_rng
 
 from hebbian_svd import svd_update, svd_test
@@ -37,7 +39,7 @@ from hebbian_svd import svd_update, svd_test
 
 try:
     print("Loading A...")
-    A = jax.numpy.load('../data/A.npy')
+    A = numpy.load('../data/A.npy')
 except:
     omega = 1
     print("A not found, loading matrices...")
@@ -85,5 +87,5 @@ def gen_pair(key):
     return A @ b, b, key
 
 
-def run(L=L, eta=0.0001, **kwargs):
-    svd_test(A, gen_pair, L=L, eta=eta, **kwargs)
+def run(L=L, eta=0.0001, verbose=True, **kwargs):
+    svd_test(A, gen_pair, L=L, eta=eta, verbose=verbose, **kwargs)
