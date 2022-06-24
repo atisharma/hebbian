@@ -194,9 +194,9 @@ def svd_solve(gen_pair, L=5, eta=1e-3, C_barrier=0.1, verbose=False):
     return {"U": U, "V": V}
 
 
-def svd_test(A, gen_pair, L=5, **kwargs):
+def svd_test(A, gen_pair, **kwargs):
     with jax.numpy.printoptions(precision=2):
-        UV = svd_solve(gen_pair, L=L, **kwargs)
+        UV = svd_solve(gen_pair, **kwargs)
         U = UV["U"]
         V = UV["V"]
         S = U.T.conjugate() @ A @ V
