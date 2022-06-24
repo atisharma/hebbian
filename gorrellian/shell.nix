@@ -5,13 +5,16 @@
 
 { pkgs ? import <nixpkgs> {} }:
 
+
 let
   # set python version
   pyver = "3.9";
   py = pkgs.python39;
   pypkgs = pkgs.python39Packages;
+
 in
 pkgs.stdenv.mkDerivation rec {
+
   name = "python-virtualenv-shell";
   env = pkgs.buildEnv { name = name; paths = buildInputs; };
   buildInputs = [
@@ -26,7 +29,8 @@ pkgs.stdenv.mkDerivation rec {
     pypkgs.setuptools
 
     pypkgs.jax
-    pypkgs.jaxlib
+    pypkgs.jaxlibWithCuda
+
     pypkgs.matplotlib
     pypkgs.black
 
