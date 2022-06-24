@@ -20,48 +20,67 @@ Incremental SVD using Hebbian updates (from data only).
 """
 
 
+import os
 import jax
-jax.config.update("jax_enable_x64", True)
+
+if os.uname()[1] != 'sol':
+    jax.config.update("jax_enable_x64", True)
 
 from jax import jit
 
 from hebbian_svd import svd_update, svd_test
 
 
+test = False;
 
-
-test = True;
 if test:
-    N = 10
-    M = 50
+    N = 100
+    M = 200
     rkey = jax.random.PRNGKey(1)
     A = jax.random.normal(rkey, shape=[N, M]) + \
             1j * jax.random.normal(rkey, shape=[N, M])
+    #A_inv = jax.numpy.linalg.inv(A)
 
 else:
-    import scipy.sparse
+    import scipy
     from scipy.io import loadmat
-    from scipy.sparse.linalg import inv as sparse_inv
+    import numpy
 
-    omega = 1
-    print("Loading matrices...")
-    # these are loaded as scipy csc_matrix sparse arrays
-    J = loadmat("../data/Jac.mat")['J']
-    Q = loadmat("../data/Vol.mat")['Q']
+    try:
+        print("Loading A...")
+        A = jax.numpy.load('../data/A.npy')
+    except:
+        omega = 1
+        print("A not found, loading matrices...")
+        # these are loaded as scipy csc_matrix sparse arrays
+        J = loadmat("../data/Jac.mat")['J']
+        Q = loadmat("../data/Vol.mat")['Q']
 
-    N = Q.shape[0]
-    M = N
+        N = Q.shape[0]
+        M = N
 
-    print("Forming A_inv...")
-    # TODO: check sense of Q
-    A_inv = 1j * omega * scipy.sparse.eye(N) - Q @ J @ sparse_inv(Q)
-    print("Forming A = inv(A)...")
-    A = inv(A_inv.todense())
+        # doing each bit separately to avoid core dump
+        P = Q.sqrt()        # since Q real and diagonal
+        del Q
+        print("Forming A_inv...")
+        A_inv = 1j * omega * numpy.eye(N) - P @ J @ numpy.linalg.inv(P)
+        del P, J
+        print("making dense...")
+        A_inv = A_inv.todense()
+        print("passing to Jax/GPU...")
+        A_inv = jax.numpy.array(A_inv)
+        A_inv = device_put(A_inv)
+        print("Forming A = inv(A_inv)...")
+        A = jax.numpy.linalg.inv(A_inv)
+        with open('../data/A.npy', 'wb') as f:
+            jax.numpy.save(f, A)
+        del A_inv
 
 
 N = A.shape[0]
 M = A.shape[1]
-L = 5
+
+L = 4
 
 
 @jit
@@ -75,10 +94,9 @@ def gen_pair(key):
     not Mx1 vector (or Nx1).
     """
     key, subkey = jax.random.split(key)
-    b = jax.random.normal(key, shape=(M,)) + 1j + jax.random.normal(key, shape=(M,))
-    #b = b / jax.numpy.linalg.norm(b)
+    b = jax.random.normal(key, shape=(M,)) + 1j * jax.random.normal(key, shape=(M,))
     return A @ b, b, key
 
 
-def run(L=L, **kwargs):
-    svd_test(A, gen_pair, L=L, **kwargs)
+def run(L=L, eta=0.0001, **kwargs):
+    svd_test(A, gen_pair, L=L, eta=eta, **kwargs)
