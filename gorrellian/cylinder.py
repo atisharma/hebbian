@@ -21,14 +21,24 @@ Incremental SVD using Hebbian updates (from data only).
 
 
 import os
-import jax
 
-# sol has a GPU, which is 32 bit
+# sol has a GPU, which is 32 bit, and needs some cores free for other work
 if os.uname()[1] != 'sol':
+    import jax
     jax.config.update("jax_enable_x64", True)
+else:
+    print('On sol, limiting threads, using 32 bit.')
+    os.environ["MKL_NUM_THREADS"] = "40" 
+    os.environ["OPENBLAS_NUM_THREADS"] = "40"
+    os.environ["NUMEXPR_NUM_THREADS"] = "40" 
+    os.environ["OMP_NUM_THREADS"] = "40" 
+    import jax
+
+from jax import device_put
 
 import scipy
 import scipy.sparse.linalg as sla
+from scipy.sparse import bsr_array
 from scipy.io import loadmat
 
 import numpy
@@ -39,10 +49,13 @@ from hebbian_svd import svd_update, svd_test
 
 try:
     print("Loading A...")
+    print()
     A = numpy.load('../data/A.npy')
+    A = bsr_array(A)
 except:
     omega = 1
     print("A not found, loading matrices...")
+    print()
     # these are loaded as scipy csc_matrix sparse arrays
     J = loadmat("../data/Jac.mat")['J']
     Q = loadmat("../data/Vol.mat")['Q']
@@ -53,14 +66,16 @@ except:
     # doing each bit separately to avoid core dump
     P = Q.sqrt()        # since Q real and diagonal
     del Q
-    print("Forming A_inv...")
+    print("Forming sparse A_inv...")
     A_inv = 1j * omega * scipy.sparse.eye(N) - P @ J @ sla.inv(P)
     del P, J
-    print("passing dense matrix to Jax/GPU...")
-    A_inv = A_inv.todense()
-    A_inv = jax.device_put(A_inv)       # too big for my GPU :(
-    print("Forming A = inv(A_inv)...")
-    A = jax.numpy.linalg.inv(A_inv)
+    #print("passing dense matrix to Jax/GPU...")
+    #A_inv = A_inv.todense()
+    #A_inv = device_put(A_inv)       # too big for my GPU :(
+    print("Forming sparse A = inv(A_inv)...")
+    A = sla.inv(A_inv)
+    A = bsr_array(A)
+    print("Saving sparse A...")
     with open('../data/A.npy', 'wb') as f:
         jax.numpy.save(f, A)
     del A_inv
@@ -84,8 +99,9 @@ def gen_pair(key):
     not Mx1 vector (or Nx1).
     """
     b = rng.standard_normal(M) + 1j * rng.standard_normal(M)
-    return A @ b, b, key
+    return device_put(A.dot(b)), device_put(b), key
 
 
 def run(L=L, eta=0.0001, verbose=True, **kwargs):
     svd_test(A, gen_pair, L=L, eta=eta, verbose=verbose, **kwargs)
+

@@ -197,6 +197,11 @@ def svd_solve(gen_pair, L=5, eta=1e-3, C_barrier=0.1, verbose=False):
 def svd_test(A, gen_pair, **kwargs):
     with jax.numpy.printoptions(precision=2):
         UV = svd_solve(gen_pair, **kwargs)
+        with open('../data/U.npy', 'wb') as f:
+            jax.numpy.save(f, U)
+        with open('../data/V.npy', 'wb') as f:
+            jax.numpy.save(f, V)
+        print("saved result.")
         U = UV["U"]
         V = UV["V"]
         S = U.T.conjugate() @ A @ V
@@ -210,7 +215,8 @@ def svd_test(A, gen_pair, **kwargs):
         print("S (GHA)")
         print(array(list(reversed(sorted(S.diagonal().real)))))
         print()
-        print("S (true)")
-        print(svd(A, compute_uv=False)[0:L])
-        print()
+        return UV
+        #print("S (true)")
+        #print(svd(A, compute_uv=False)[0:L])
+        #print()
 
