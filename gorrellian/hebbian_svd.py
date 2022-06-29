@@ -206,12 +206,12 @@ def svd_test(A, gen_pair, **kwargs):
         V = UV["V"]
         S = U.T.conjugate() @ A @ V
         print()
-        print("U'U (GHA)")
-        print(U.conjugate().T @ U)
-        print()
-        print("V'V (GHA)")
-        print(V.conjugate().T @ V)
-        print()
+        #print("U'U (GHA)")
+        #print(U.conjugate().T @ U)
+        #print()
+        #print("V'V (GHA)")
+        #print(V.conjugate().T @ V)
+        #print()
         print("S (GHA)")
         print(array(list(reversed(sorted(S.diagonal().real)))))
         print()

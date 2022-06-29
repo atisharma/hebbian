@@ -51,9 +51,9 @@ try:
     print("Loading A...")
     print()
     A = numpy.load('../data/A.npy')
-    A = bsr_array(A)
 except:
-    omega = 1
+    omega = 0.7 * numpy.sqrt(1.4) * 0.2
+    print(f"omega = {omega}")
     print("A not found, loading matrices...")
     print()
     # these are loaded as scipy csc_matrix sparse arrays
@@ -69,15 +69,14 @@ except:
     print("Forming sparse A_inv...")
     A_inv = 1j * omega * scipy.sparse.eye(N) - P @ J @ sla.inv(P)
     del P, J
+    A_inv = A_inv.todense()     # A is quite dense
     #print("passing dense matrix to Jax/GPU...")
-    #A_inv = A_inv.todense()
     #A_inv = device_put(A_inv)       # too big for my GPU :(
-    print("Forming sparse A = inv(A_inv)...")
-    A = sla.inv(A_inv)
-    A = bsr_array(A)
-    print("Saving sparse A...")
+    print("Forming A = inv(A_inv)...")
+    A = numpy.linalg.inv(A_inv)
+    print("Saving dense A...")
     with open('../data/A.npy', 'wb') as f:
-        jax.numpy.save(f, A)
+        numpy.save(f, A)
     del A_inv
 
 
@@ -96,10 +95,10 @@ def gen_pair(key):
       The Hebbian solver doesn't know.
 
     NB: in the scheme we use, a and b are stored as just 1D arrays,
-    not Mx1 vector (or Nx1).
+    not Mx1 vector/matrix (or Nx1).
     """
     b = rng.standard_normal(M) + 1j * rng.standard_normal(M)
-    return device_put(A.dot(b)), device_put(b), key
+    return device_put(A @ b), device_put(b), key
 
 
 def run(L=L, eta=0.0001, verbose=True, **kwargs):

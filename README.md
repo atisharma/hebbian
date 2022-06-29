@@ -1,11 +1,11 @@
 # Low-memory Resolvent modes from snapshot data
 
-Incremental PCA, SVD using Hebbian updates (from data only) as per Gorrell's paper.
+Incremental PCA or SVD using Hebbian updates (from data snapshots only) as per Gorrell's paper.
 
 ### PCA problem
 
 Given many data vectors {$x$}, find the eigenvectors of the correlation matrix $R$,
-where $E(xx') = R$.
+where $E(xx') = R$. This code is not finished.
 
 ### SVD problem
 
@@ -19,23 +19,19 @@ As a guide, to get the leading two singular vectors of a 200x500 matrix, I used 
 
 ### Running the code
 
-I wrote the code in Hy, which is a lisp-like 'dialect' of python.
-You will need to pip install hy first, then you can import from within regular python by doing
+The current version of the code uses jax, a performant numpy replacement that has GPU capabilities.
+To run,
 ```
-import hy
-import example as ex
+import test
+test.run()
 ```
-then (for example)
-```
-ex.svd_test(iterations=100000, eta=1e-4, d=5e-5)
-```
-as normal.
 
 ### Performance
 
-No effort has been made in this regard in this code. Numpy is slow.
+No effort has been made in this regard in this code. It is probably slow. It is written with clarity in mind.
+There exists a well optimised implementation in Common Lisp, and a reference C++ version provided by Gorrell.
 
-### Dynamic Mode Decomposition
+### Dynamic Mode Decomposition and other modal decompositions
 
 You could probably get DMD modes too using $u(t)$ and $u(t+1)$ data pairs.
 
