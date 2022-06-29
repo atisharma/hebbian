@@ -13,14 +13,14 @@ Given many data vector pairs {$(a,b)$}, where $a=Mb$, find the singular vectors 
 
 ### Convergence
 
-Although there is a proof of convergence, in practice you need a small enough $\eta$ (update weight) and $d$ (eta decay).
-If it fails to converge, try halving both and doubling $N$.
-As a guide, to get the leading two singular vectors of a 200x500 matrix, I used $\eta=0.0001$ and $d=0.00005$.
+Although there is a proof of convergence, in practice you need a small enough $\eta$ (update weight).
+The current code implements some simple adaptive step size logic. The default $\eta$ should be OK for most cases.
 
 ### Running the code
 
-The current version of the code uses jax, a performant numpy replacement that has GPU capabilities.
-To run,
+The current version of the code uses [jax](https://jax.readthedocs.io/en/latest/), a performant numpy replacement that has GPU capabilities.
+
+To run the test example,
 ```
 import test
 test.run()
