@@ -13,7 +13,7 @@ Given many data vector pairs {$(a,b)$}, where $a=Mb$, find the singular vectors 
 
 ### Convergence
 
-Although there is a proof of convergence, in practice you need a small enough $\eta$ (update weight).
+Although there is a proof of convergence, in practice you need a small enough $\eta$ (interpreted as update weight or update step size).
 The current code implements some simple adaptive step size logic. The default $\eta$ should be OK for most cases.
 
 ### Running the code
