@@ -21,40 +21,70 @@ Incremental SVD using Hebbian updates (from data only).
 
 
 import os
+
+if os.uname()[1] == 'sol':
+    print('On sol, limiting number of threads.')
+    os.environ["MKL_NUM_THREADS"] = "40" 
+    os.environ["OPENBLAS_NUM_THREADS"] = "40"
+    os.environ["NUMEXPR_NUM_THREADS"] = "40" 
+    os.environ["OMP_NUM_THREADS"] = "40" 
+
 import jax
-
-if os.uname()[1] != 'sol':
-    jax.config.update("jax_enable_x64", True)
-
 from jax import jit
 
-from hebbian_svd import svd_update, svd_test
+jax.config.update("jax_enable_x64", True)
+
+from time import gmtime, strftime, time
+
+from hebbian_svd import svd_test
 
 
-N = 100
-M = 200
+# example case of size similar to cylinder
+N = 40000
+M = 50000
+L = 10
+
 rkey = jax.random.PRNGKey(1)
-A = jax.random.normal(rkey, shape=[N, M]) + \
-        1j * jax.random.normal(rkey, shape=[N, M])
-#A_inv = jax.numpy.linalg.inv(A)
-
-L = 4
+# generate reasonable low-rank matrix A=USV'
+# random orthogonal matrices U, V
+U, _ = jax.numpy.linalg.qr(
+        jax.random.normal(rkey, shape=[N, L]) + \
+        1j * jax.random.normal(rkey, shape=[N, L]) )
+V, _ = jax.numpy.linalg.qr(
+        jax.random.normal(rkey, shape=[M, L]) + \
+        1j * jax.random.normal(rkey, shape=[M, L]) )
+# random singular values
+S_sqrt = 100 * jax.random.normal(rkey, shape=[L])
+S = jax.numpy.diag((S_sqrt * S_sqrt).sort())
+print("true singular values:")
+print(jax.numpy.flip(S.diagonal()))
 
 
 @jit
 def gen_pair(key):
     """
     Generate a random complex data pair, a = Ab.
-      You can generate either a and find b, or the other way round.
-      The Hebbian solver doesn't know.
 
     NB: in the scheme we use, a and b are stored as just 1D arrays,
     not Mx1 vector (or Nx1).
+
+    Here, we use
+        a = U S V' b = (U S) (V' b)
     """
     key, subkey = jax.random.split(key)
     b = jax.random.normal(key, shape=(M,)) + 1j * jax.random.normal(key, shape=(M,))
-    return A @ b, b, key
+    return (U @ S) @ (V.T.conjugate() @ b), b, key
 
 
-def run(L=L, eta=0.0001, **kwargs):
-    svd_test(A, gen_pair, L=L, eta=eta, **kwargs)
+def run(L=5, eta=1e-3, **kwargs):
+    print(strftime("%H:%M:%S", gmtime()))
+    UVS = svd_test(gen_pair, L=L, eta=eta, **kwargs)
+    print(strftime("%H:%M:%S", gmtime()))
+    print("true singular values:")
+    print(jax.numpy.flip(S.diagonal()))
+
+    print("found singular values (from snapshots):")
+    print(UVS['S'])
+    print("found singular values (using orthogonal projection):")
+    print( ( (UVS["U"].T.conjugate() @ U) @ S @ (V.T.conjugate() @ UVS["V"]) ).diagonal().real )
+    return UVS

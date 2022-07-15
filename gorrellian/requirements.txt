@@ -1,2 +1,4 @@
 numpy
-hy
+scipy
+jax
+jaxlib

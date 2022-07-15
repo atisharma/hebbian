@@ -22,19 +22,17 @@ Incremental SVD using Hebbian updates (from data only).
 
 import os
 
-# sol has a GPU, which is 32 bit, and needs some cores free for other work
-if os.uname()[1] != 'sol':
-    import jax
-    jax.config.update("jax_enable_x64", True)
-else:
-    print('On sol, limiting threads, using 32 bit.')
+if os.uname()[1] == 'sol':
+    print('On sol, limiting number of threads.')
     os.environ["MKL_NUM_THREADS"] = "40" 
     os.environ["OPENBLAS_NUM_THREADS"] = "40"
     os.environ["NUMEXPR_NUM_THREADS"] = "40" 
     os.environ["OMP_NUM_THREADS"] = "40" 
-    import jax
 
-from jax import device_put
+import jax
+import jax.numpy as jnp
+
+jax.config.update("jax_enable_x64", True)
 
 import scipy
 import scipy.sparse.linalg as sla
@@ -44,13 +42,16 @@ from scipy.io import loadmat
 import numpy
 from numpy.random import default_rng
 
-from hebbian_svd import svd_update, svd_test
+from time import gmtime, strftime
+
+from hebbian_svd import svd_test
 
 
 try:
     print("Loading A...")
     print()
     A = numpy.load('../data/A.npy')
+    A = jax.numpy.array(A)
 except:
     omega = 0.7 * numpy.sqrt(1.4) * 0.2
     print(f"omega = {omega}")
@@ -69,13 +70,11 @@ except:
     print("Forming sparse A_inv...")
     A_inv = 1j * omega * scipy.sparse.eye(N) - P @ J @ sla.inv(P)
     del P, J
-    A_inv = A_inv.todense()     # A is quite dense
-    #print("passing dense matrix to Jax/GPU...")
-    #A_inv = device_put(A_inv)       # too big for my GPU :(
     print("Forming A = inv(A_inv)...")
-    A = numpy.linalg.inv(A_inv)
-    print("Saving dense A...")
+    A = sla.inv(A_inv)
+    A = jax.numpy.array(A)
     with open('../data/A.npy', 'wb') as f:
+        print("Saving A...")
         numpy.save(f, A)
     del A_inv
 
@@ -83,9 +82,8 @@ except:
 N = A.shape[0]
 M = A.shape[1]
 
-L = 4
-
 rng = default_rng(0)
+rkey = jax.random.PRNGKey(1)
 
 
 def gen_pair(key):
@@ -97,10 +95,16 @@ def gen_pair(key):
     NB: in the scheme we use, a and b are stored as just 1D arrays,
     not Mx1 vector/matrix (or Nx1).
     """
-    b = rng.standard_normal(M) + 1j * rng.standard_normal(M)
-    return device_put(A @ b), device_put(b), key
+    #b = rng.standard_normal(M) + 1j * rng.standard_normal(M)
+    key, subkey = jax.random.split(key)
+    b = jax.random.normal(key, shape=(M,)) + 1j * jax.random.normal(key, shape=(M,))
+    return A @ b, b, key
 
 
-def run(L=L, eta=0.0001, verbose=True, **kwargs):
-    svd_test(A, gen_pair, L=L, eta=eta, verbose=verbose, **kwargs)
-
+def run(L=4, eta=1e-3, verbose=True, **kwargs):
+    print(strftime("%H:%M:%S", gmtime()))
+    UVS = svd_test(gen_pair, L=L, eta=eta, verbose=verbose, **kwargs)
+    print(strftime("%H:%M:%S", gmtime()))
+    print("found singular values (from snapshots):")
+    print(UVS['S'])
+    return UVS
